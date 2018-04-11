@@ -1,0 +1,5 @@
+[Gerrit]
+username = 
+hostname = 
+port = 
+key_filename = /path_to_ssh_key
