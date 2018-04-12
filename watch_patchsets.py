@@ -56,18 +56,18 @@ class PatchsetStream(threading.Thread):
 class WatchSubmitters():
     def isFirstTimeContributor(self, submitter):
         try:
-            cmd_query_open_patches_by_owner = 'gerrit query --format=JSON status:open owner:"' + submitter + '"'
+            cmd_query_open_patches_by_owner = 'gerrit query --format=JSON owner:"' + submitter + '"'
             _, stdout, _ = client.exec_command(cmd_query_open_patches_by_owner)
             
             rowCount = 0
-            line_with_stats = stdout.readlines()
+            lines = stdout.readlines()
 
-            if line_with_stats:
-                json_data = json.loads(line_with_stats[0])
-                print json_data
-                rowCount = json_data.get("rowCount", "")
+            if len(lines) > 1:
+                json_data = json.loads(lines[1])
+                if json_data:
+                    rowCount = json_data.get("rowCount", "")
 
-            if rowCount == 0:
+            if rowCount == 1:
                 return True
 
             return False
