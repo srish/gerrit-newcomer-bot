@@ -68,7 +68,7 @@ class WatchSubmitters():
             if len(lines) > 1:
                 json_data = json.loads(lines[1])
                 if json_data:
-                    rowCount = json_data.get("rowCount", "")
+                    rowCount = json_data.get("rowCount")
 
             if rowCount == 1:
                 self.setPatchDetails(json.loads(lines[0]))
@@ -84,16 +84,32 @@ class WatchSubmitters():
     def getPatchDetails(self):
         return self.patchDetails
 
+    def addReviewer(self, project, changeID):
+        reviewerBot = "first-time-contributor"
+
+        try:
+            cmd_set_reviewers = 'gerrit set-reviewers --project ' \
+            +  project + ' -a ' + reviewerBot + ' ' + changeID
+            _, stdout, _ = client.exec_command(cmd_set_reviewers)
+            
+        except:
+            logging.exception('Gerrit error')
+
 if __name__ == '__main__':
     stream = PatchsetStream()
     stream.daemon = True
     stream.start()
 
     while 1:
-        # TODO later > obtain submitter value from the event dict below 
         submitter = WatchSubmitters()
-        print submitter.isFirstTimeContributor("Srishakatux")
-        print submitter.getPatchDetails()
+        # TODO later > obtain submitter value from the event dict below
+        isFirstTimeContributor = submitter.isFirstTimeContributor("Srishakatux")
+        
+        if isFirstTimeContributor:
+            details = submitter.getPatchDetails()
+            project = details.get("project")
+            changeID = details.get("id")
+            submitter.addReviewer(project, changeID)
 
         event = queue.get()
         print event  
