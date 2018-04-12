@@ -54,6 +54,9 @@ class PatchsetStream(threading.Thread):
             time.sleep(5)
 
 class WatchSubmitters():
+    def __init__(self):
+        self.patchDetails = {}
+
     def isFirstTimeContributor(self, submitter):
         try:
             cmd_query_open_patches_by_owner = 'gerrit query --format=JSON owner:"' + submitter + '"'
@@ -68,11 +71,18 @@ class WatchSubmitters():
                     rowCount = json_data.get("rowCount", "")
 
             if rowCount == 1:
+                self.setPatchDetails(json.loads(lines[0]))
                 return True
 
             return False
         except:
             logging.exception('Gerrit error')
+    
+    def setPatchDetails(self, details):
+        self.patchDetails = details
+
+    def getPatchDetails(self):
+        return self.patchDetails
 
 if __name__ == '__main__':
     stream = PatchsetStream()
@@ -82,7 +92,8 @@ if __name__ == '__main__':
     while 1:
         # TODO later > obtain submitter value from the event dict below 
         submitter = WatchSubmitters()
-        print "Is Srishakatux a first time contributor ? " + str(submitter.isFirstTimeContributor("Srishakatux"))
+        print submitter.isFirstTimeContributor("Srishakatux")
+        print submitter.getPatchDetails()
 
         event = queue.get()
         print event  
