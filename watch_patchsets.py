@@ -37,6 +37,15 @@ client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 client.connect(**options)
 client.get_transport().set_keepalive(60)
 
+# Bot details
+reviewerBot = "first-time-contributor"
+welcomeMessage = "Thank you for making your first contribution to Wikimedia! :)"  \
+"To start contributing code to Wikimedia, " \
+"read https://www.mediawiki.org/wiki/New_Developers | " \
+"To get an overview of technical and non-technical contribution ideas, "\
+"read https://www.mediawiki.org/wiki/How_to_contribute | No answer? "\
+"Try https://discourse-mediawiki.wmflabs.org" 
+
 class PatchsetStream(threading.Thread):
     """Threaded job; listens for Gerrit events patchset-created only
      and puts them in a queue."""
@@ -85,8 +94,6 @@ class WatchSubmitters():
         return self.patchDetails
 
     def addReviewer(self, project, changeID):
-        reviewerBot = "first-time-contributor"
-
         try:
             cmd_set_reviewers = 'gerrit set-reviewers --project ' \
             +  project + ' -a ' + reviewerBot + ' ' + changeID
@@ -95,6 +102,13 @@ class WatchSubmitters():
         except:
             logging.exception('Gerrit error')
 
+    def addComment(self, changeID):
+        try:
+            cmd_review = 'gerrit review -p test -b master -m "' + welcomeMessage + '" ' + changeID
+            client.exec_command(cmd_review)
+        except:
+            logging.exception('Gerrit error')
+       
 if __name__ == '__main__':
     stream = PatchsetStream()
     stream.daemon = True
@@ -110,6 +124,7 @@ if __name__ == '__main__':
             project = details.get("project")
             changeID = details.get("id")
             submitter.addReviewer(project, changeID)
+            submitter.addComment(changeID)
 
         event = queue.get()
         print event  
