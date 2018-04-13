@@ -45,6 +45,7 @@ welcomeMessage = "Thank you for making your first contribution to Wikimedia! :)"
     "To get an overview of technical and non-technical contribution ideas, "\
     "read https://www.mediawiki.org/wiki/How_to_contribute | No answer? "\
     "Try https://discourse-mediawiki.wmflabs.org"
+newcomerGroup = "NEWCOMERS"
 
 
 class WatchPatchsets(threading.Thread):
@@ -65,10 +66,11 @@ class WatchPatchsets(threading.Thread):
             time.sleep(5)
 
 
-class WatchNewContributors():
+class WelcomeFirsttimers():
     def __init__(self):
         self.isNewContributor = False
         self.isFirstTimeContributor = False
+        self.isRisingContributor = False
 
     def identify(self, submitter):
         try:
@@ -89,6 +91,8 @@ class WatchNewContributors():
                 self.isFirstTimeContributor = True
             elif rowCount > 0 and rowCount <= 5:
                 self.isNewContributor = True
+            elif rowCount > 5:
+                self.isRisingContributor = True
         except BaseException:
             logging.exception('Gerrit error')
 
@@ -97,6 +101,9 @@ class WatchNewContributors():
 
     def getIsNewContributor(self):
         return self.isNewContributor
+
+    def getIsRisingContributor(self):
+        return self.isRisingContributor
 
     def addReviewer(self, project, changeID):
         try:
@@ -130,16 +137,60 @@ class WatchNewContributors():
             logging.exception('Gerrit error')
 
 
+class GroupNewcomers():
+    def doesNewcomerGroupExists(self):
+        try:
+            cmd_ls_groups = 'gerrit ls-groups'
+            _, stdout, _ = client.exec_command(cmd_ls_groups)
+            lines = stdout.readlines()
+
+            for i in range(len(lines)):
+                if newcomerGroup in lines[i]:
+                    return True
+            return False
+
+        except BaseException:
+            logging.exception('Gerrit error')
+
+    def createNewcomerGroup(self):
+        try:
+            cmd_create_group = 'gerrit create-group ' + newcomerGroup
+            client.exec_command(cmd_create_group)
+
+        except BaseException:
+            logging.exception('Gerrit error')
+
+    def addNewcomerToGroup(self, submitter):
+        try:
+            cmd_set_member = 'gerrit set-members -a ' + submitter + " " + newcomerGroup
+            client.exec_command(cmd_set_member)
+
+        except BaseException:
+            logging.exception('Gerrit error')
+
+    def removeNewcomerFromGroup(self, submitter):
+        try:
+            cmd_set_member = 'gerrit set-members -r ' + submitter + " " + newcomerGroup
+            client.exec_command(cmd_set_member)
+
+        except BaseException:
+            logging.exception('Gerrit error')
+
+
 if __name__ == '__main__':
     stream = WatchPatchsets()
     stream.daemon = True
     stream.start()
 
     while True:
-        submitter = WatchNewContributors()
+        submitter = WelcomeFirsttimers()
+        group = GroupNewcomers()
         # TODO later > obtain submitter value from the event dict below
         submitter.identify("Srishakatux")
+        
         firstTimeContrib = submitter.getIsFirstTimeContributor()
+        newContrib = submitter.getIsNewContributor()
+        risingContrib = submitter.getIsRisingContributor() 
 
         if firstTimeContrib:
             curPatch = submitter.getCurrentPatchset("Srishakatux")
@@ -151,12 +202,15 @@ if __name__ == '__main__':
             submitter.addReviewer(project, changeID)
             submitter.addComment(curRev)
 
-        newContrib = submitter.getIsNewContributor()
-
         if newContrib:
-            print "I am a new contributor"
+            newGroupExists = group.doesNewcomerGroupExists()
+            if not newGroupExists:
+                group.createNewcomerGroup()
+                group.addNewcomerToGroup("Srishakatux")
+
+        if risingContrib:
+            group.removeNewcomerFromGroup("Srishakatux")
 
         event = queue.get()
-        print event
 
     stream.join()
