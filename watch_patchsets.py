@@ -38,7 +38,7 @@ client.connect(**options)
 client.get_transport().set_keepalive(60)
 
 # Bot details
-reviewerBot = "first-time-contributor"
+reviewerBot = "First-time-contributor"
 welcomeMessage = "Thank you for making your first contribution to Wikimedia! :)"  \
 "To start contributing code to Wikimedia, " \
 "read https://www.mediawiki.org/wiki/New_Developers | " \
@@ -102,9 +102,25 @@ class WatchSubmitters():
         except:
             logging.exception('Gerrit error')
 
-    def addComment(self, changeID):
+    def getCurRevision(self, submitter):
         try:
-            cmd_review = 'gerrit review -p test -b master -m "' + welcomeMessage + '" ' + changeID
+            cmd_query_cur_patch_set = 'gerrit query --format=JSON --current-patch-set owner:' \
+            +  submitter + ' limit:1'
+
+            _, stdout, _ = client.exec_command(cmd_query_cur_patch_set)
+            lines = stdout.readlines()           
+            if lines[0]:
+                json_data = json.loads(lines[0])
+                curRev = json_data.get("currentPatchSet").get("revision")
+                return curRev
+            return 
+
+        except:
+            logging.exception('Gerrit error')
+
+    def addComment(self, curRev):
+        try:
+            cmd_review = 'gerrit review -m "' + welcomeMessage + '" ' + curRev
             client.exec_command(cmd_review)
         except:
             logging.exception('Gerrit error')
@@ -124,7 +140,8 @@ if __name__ == '__main__':
             project = details.get("project")
             changeID = details.get("id")
             submitter.addReviewer(project, changeID)
-            submitter.addComment(changeID)
+            curRev = submitter.getCurRevision("Srishakatux")
+            submitter.addComment(curRev)
 
         event = queue.get()
         print event  
