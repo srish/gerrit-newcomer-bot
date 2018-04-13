@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
     watch_patchsets.py
-    
+
     Watch events that get triggered when a patchset is created!
 
     :author: ***
@@ -40,110 +40,123 @@ client.get_transport().set_keepalive(60)
 # Bot details
 reviewerBot = "First-time-contributor"
 welcomeMessage = "Thank you for making your first contribution to Wikimedia! :)"  \
-"To start contributing code to Wikimedia, " \
-"read https://www.mediawiki.org/wiki/New_Developers | " \
-"To get an overview of technical and non-technical contribution ideas, "\
-"read https://www.mediawiki.org/wiki/How_to_contribute | No answer? "\
-"Try https://discourse-mediawiki.wmflabs.org" 
+    "To start contributing code to Wikimedia, " \
+    "read https://www.mediawiki.org/wiki/New_Developers | " \
+    "To get an overview of technical and non-technical contribution ideas, "\
+    "read https://www.mediawiki.org/wiki/How_to_contribute | No answer? "\
+    "Try https://discourse-mediawiki.wmflabs.org"
 
-class PatchsetStream(threading.Thread):
+
+class WatchPatchsets(threading.Thread):
     """Threaded job; listens for Gerrit events patchset-created only
      and puts them in a queue."""
+
     def run(self):
-        while 1:
+        while True:
             try:
                 cmd_patchset_created = 'gerrit stream-events -s patchset-created -s ref-updated'
                 _, stdout, _ = client.exec_command(cmd_patchset_created)
                 for line in stdout:
                     queue.put(json.loads(line))
-            except:
+            except BaseException:
                 logging.exception('Gerrit error')
             finally:
                 client.close()
             time.sleep(5)
 
-class WatchSubmitters():
-    def __init__(self):
-        self.patchDetails = {}
 
-    def isFirstTimeContributor(self, submitter):
+class WatchNewContributors():
+    def __init__(self):
+        self.isNewContributor = False
+        self.isFirstTimeContributor = False
+
+    def identify(self, submitter):
         try:
-            cmd_query_open_patches_by_owner = 'gerrit query --format=JSON owner:"' + submitter + '"'
-            _, stdout, _ = client.exec_command(cmd_query_open_patches_by_owner)
-            
+            cmd_query_patches_by_owner = 'gerrit query --format=JSON owner:"' \
+                + submitter + '"'
+            _, stdout, _ = client.exec_command(cmd_query_patches_by_owner)
+
             rowCount = 0
             lines = stdout.readlines()
+            numLines = len(lines)
 
-            if len(lines) > 1:
-                json_data = json.loads(lines[1])
+            if numLines >= 1:
+                json_data = json.loads(lines[numLines - 1])
                 if json_data:
                     rowCount = json_data.get("rowCount")
 
             if rowCount == 1:
-                self.setPatchDetails(json.loads(lines[0]))
-                return True
-
-            return False
-        except:
+                self.isFirstTimeContributor = True
+            elif rowCount > 0 and rowCount <= 5:
+                self.isNewContributor = True
+        except BaseException:
             logging.exception('Gerrit error')
-    
-    def setPatchDetails(self, details):
-        self.patchDetails = details
 
-    def getPatchDetails(self):
-        return self.patchDetails
+    def getIsFirstTimeContributor(self):
+        return self.isFirstTimeContributor
+
+    def getIsNewContributor(self):
+        return self.isNewContributor
 
     def addReviewer(self, project, changeID):
         try:
             cmd_set_reviewers = 'gerrit set-reviewers --project ' \
-            +  project + ' -a ' + reviewerBot + ' ' + changeID
+                + project + ' -a ' + reviewerBot + ' ' + changeID
             _, stdout, _ = client.exec_command(cmd_set_reviewers)
-            
-        except:
+
+        except BaseException:
             logging.exception('Gerrit error')
 
-    def getCurRevision(self, submitter):
+    def getCurrentPatchset(self, submitter):
         try:
             cmd_query_cur_patch_set = 'gerrit query --format=JSON --current-patch-set owner:' \
-            +  submitter + ' limit:1'
-
+                + submitter
             _, stdout, _ = client.exec_command(cmd_query_cur_patch_set)
-            lines = stdout.readlines()           
-            if lines[0]:
-                json_data = json.loads(lines[0])
-                curRev = json_data.get("currentPatchSet").get("revision")
-                return curRev
-            return 
+            lines = stdout.readlines()
 
-        except:
+            if lines[0]:
+                curPatch = json.loads(lines[0])
+                return curPatch
+            return
+
+        except BaseException:
             logging.exception('Gerrit error')
 
     def addComment(self, curRev):
         try:
             cmd_review = 'gerrit review -m "' + welcomeMessage + '" ' + curRev
             client.exec_command(cmd_review)
-        except:
+        except BaseException:
             logging.exception('Gerrit error')
-       
+
+
 if __name__ == '__main__':
-    stream = PatchsetStream()
+    stream = WatchPatchsets()
     stream.daemon = True
     stream.start()
 
-    while 1:
-        submitter = WatchSubmitters()
+    while True:
+        submitter = WatchNewContributors()
         # TODO later > obtain submitter value from the event dict below
-        isFirstTimeContributor = submitter.isFirstTimeContributor("Srishakatux")
-        
-        if isFirstTimeContributor:
-            details = submitter.getPatchDetails()
-            project = details.get("project")
-            changeID = details.get("id")
+        submitter.identify("Srishakatux")
+        firstTimeContrib = submitter.getIsFirstTimeContributor()
+
+        if firstTimeContrib:
+            curPatch = submitter.getCurrentPatchset("Srishakatux")
+
+            project = curPatch.get("project")
+            changeID = curPatch.get("id")
+            curRev = curPatch.get("currentPatchSet").get("revision")
+
             submitter.addReviewer(project, changeID)
-            curRev = submitter.getCurRevision("Srishakatux")
             submitter.addComment(curRev)
 
+        newContrib = submitter.getIsNewContributor()
+
+        if newContrib:
+            print "I am a new contributor"
+
         event = queue.get()
-        print event  
+        print event
 
     stream.join()
