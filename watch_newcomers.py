@@ -55,7 +55,7 @@ class WatchPatchsets(threading.Thread):
     def run(self):
         while True:
             try:
-                cmd_patchset_created = 'gerrit stream-events -s patchset-created -s ref-updated'
+                cmd_patchset_created = 'gerrit stream-events -s patchset-created'
                 _, stdout, _ = client.exec_command(cmd_patchset_created)
                 for line in stdout:
                     queue.put(json.loads(line))
@@ -96,13 +96,13 @@ class WelcomeFirsttimers():
         except BaseException:
             logging.exception('Gerrit error')
 
-    def isFirstTimeContributor(self):
+    def getIsFirstTimeContributor(self):
         return self.isFirstTimeContributor
 
-    def isNewContributor(self):
+    def getIsNewContributor(self):
         return self.isNewContributor
 
-    def isRisingContributor(self):
+    def getIsRisingContributor(self):
         return self.isRisingContributor
 
     def addReviewer(self, project, changeID):
@@ -181,9 +181,7 @@ def welcomeNewcomersAndGroupThem(newcomer):
     group = GroupNewcomers()
     firstTimer.identify(newcomer)
     
-    firstTimeContributor = firstTimer.isFirstTimeContributor()
-    newContributor = firstTimer.isNewContributor()
-    risingContributor = firstTimer.isRisingContributor() 
+    firstTimeContributor = firstTimer.getIsFirstTimeContributor() 
 
     if firstTimeContributor:
         curPatch = firstTimer.getCurrentPatchset(newcomer)
@@ -195,11 +193,15 @@ def welcomeNewcomersAndGroupThem(newcomer):
         firstTimer.addReviewer(project, changeID)
         firstTimer.addComment(curRev)
 
+    newContributor = firstTimer.getIsNewContributor()
+
     if newContributor:
         newGroupExists = group.doesNewcomerGroupExists()
         if not newGroupExists:
             group.createNewcomerGroup()
         group.addNewcomerToGroup(newcomer)
+
+    risingContributor = firstTimer.getIsRisingContributor()
 
     if risingContributor:
         group.removeNewcomerFromGroup(newcomer)
