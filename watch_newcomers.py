@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 """
-    watch_patchsets.py
+    watch_newcomers.py
 
-    Watch events that get triggered when a patchset is created!
+    Welcome newcomers and group them!
 
-    :author: ***
+    :author: Srish
 """
 
 import ConfigParser
@@ -96,13 +96,13 @@ class WelcomeFirsttimers():
         except BaseException:
             logging.exception('Gerrit error')
 
-    def getIsFirstTimeContributor(self):
+    def isFirstTimeContributor(self):
         return self.isFirstTimeContributor
 
-    def getIsNewContributor(self):
+    def isNewContributor(self):
         return self.isNewContributor
 
-    def getIsRisingContributor(self):
+    def isRisingContributor(self):
         return self.isRisingContributor
 
     def addReviewer(self, project, changeID):
@@ -176,6 +176,52 @@ class GroupNewcomers():
         except BaseException:
             logging.exception('Gerrit error')
 
+def welcomeNewcomersAndGroupThem(newcomer):
+    firstTimer = WelcomeFirsttimers()
+    group = GroupNewcomers()
+    firstTimer.identify(newcomer)
+    
+    firstTimeContributor = firstTimer.isFirstTimeContributor()
+    newContributor = firstTimer.isNewContributor()
+    risingContributor = firstTimer.isRisingContributor() 
+
+    if firstTimeContributor:
+        curPatch = firstTimer.getCurrentPatchset(newcomer)
+
+        project = curPatch.get("project")
+        changeID = curPatch.get("id")
+        curRev = curPatch.get("currentPatchSet").get("revision")
+
+        firstTimer.addReviewer(project, changeID)
+        firstTimer.addComment(curRev)
+
+    if newContributor:
+        newGroupExists = group.doesNewcomerGroupExists()
+        if not newGroupExists:
+            group.createNewcomerGroup()
+        group.addNewcomerToGroup(newcomer)
+
+    if risingContributor:
+        group.removeNewcomerFromGroup(newcomer)
+
+# From https://stackoverflow.com/a/9807955
+def findSubmitterKey(key, dictionary):
+    for k, v in dictionary.iteritems():
+        if k == key:
+            yield v
+        elif isinstance(v, dict):
+            for result in findSubmitterKey(key, v):
+                yield result
+        elif isinstance(v, list):
+            for d in v:
+                if isinstance(d, dict):
+                    for result in findSubmitterKey(key, d):
+                        yield result
+
+def getSubmitter(submitterList):
+    submitterList[:] = [item for item in submitterList if item != '']
+    newcomer = submitterList[:][0]
+    return newcomer
 
 if __name__ == '__main__':
     stream = WatchPatchsets()
@@ -183,34 +229,10 @@ if __name__ == '__main__':
     stream.start()
 
     while True:
-        submitter = WelcomeFirsttimers()
-        group = GroupNewcomers()
-        # TODO later > obtain submitter value from the event dict below
-        submitter.identify("Srishakatux")
-        
-        firstTimeContrib = submitter.getIsFirstTimeContributor()
-        newContrib = submitter.getIsNewContributor()
-        risingContrib = submitter.getIsRisingContributor() 
-
-        if firstTimeContrib:
-            curPatch = submitter.getCurrentPatchset("Srishakatux")
-
-            project = curPatch.get("project")
-            changeID = curPatch.get("id")
-            curRev = curPatch.get("currentPatchSet").get("revision")
-
-            submitter.addReviewer(project, changeID)
-            submitter.addComment(curRev)
-
-        if newContrib:
-            newGroupExists = group.doesNewcomerGroupExists()
-            if not newGroupExists:
-                group.createNewcomerGroup()
-                group.addNewcomerToGroup("Srishakatux")
-
-        if risingContrib:
-            group.removeNewcomerFromGroup("Srishakatux")
-
         event = queue.get()
-
+        if event:
+            submitterList = list(findSubmitterKey('username', event))
+            newcomer = getSubmitter(submitterList)
+            welcomeNewcomersAndGroupThem(newcomer) 
+               
     stream.join()
