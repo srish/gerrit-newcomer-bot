@@ -1,12 +1,4 @@
 #!/usr/bin/env python
-"""
-    watch_newcomers.py
-
-    Welcome newcomers and group them!
-
-    :author: Srish
-"""
-
 import ConfigParser
 import Queue
 import json
@@ -49,9 +41,6 @@ newcomerGroup = "NEWCOMERS"
 
 
 class WatchPatchsets(threading.Thread):
-    """Threaded job; listens for Gerrit events patchset-created only
-     and puts them in a queue."""
-
     def run(self):
         while True:
             try:
@@ -110,7 +99,6 @@ class WelcomeFirsttimers():
             cmd_set_reviewers = 'gerrit set-reviewers --project ' \
                 + project + ' -a ' + reviewerBot + ' ' + changeID
             _, stdout, _ = client.exec_command(cmd_set_reviewers)
-
         except BaseException:
             logging.exception('Gerrit error')
 
@@ -125,7 +113,6 @@ class WelcomeFirsttimers():
                 curPatch = json.loads(lines[0])
                 return curPatch
             return
-
         except BaseException:
             logging.exception('Gerrit error')
 
@@ -148,7 +135,6 @@ class GroupNewcomers():
                 if newcomerGroup in lines[i]:
                     return True
             return False
-
         except BaseException:
             logging.exception('Gerrit error')
 
@@ -156,33 +142,30 @@ class GroupNewcomers():
         try:
             cmd_create_group = 'gerrit create-group ' + newcomerGroup
             client.exec_command(cmd_create_group)
-
         except BaseException:
             logging.exception('Gerrit error')
 
     def addNewcomerToGroup(self, submitter):
         try:
-            cmd_set_member = 'gerrit set-members -a ' + submitter + " " + newcomerGroup
-            client.exec_command(cmd_set_member)
-
+            cmd_add_member = 'gerrit set-members -a ' + submitter + " " + newcomerGroup
+            client.exec_command(cmd_add_member)
         except BaseException:
             logging.exception('Gerrit error')
 
     def removeNewcomerFromGroup(self, submitter):
         try:
-            cmd_set_member = 'gerrit set-members -r ' + submitter + " " + newcomerGroup
-            client.exec_command(cmd_set_member)
-
+            cmd_remove_member = 'gerrit set-members -r ' + submitter + " " + newcomerGroup
+            client.exec_command(cmd_remove_member)
         except BaseException:
             logging.exception('Gerrit error')
+
 
 def welcomeNewcomersAndGroupThem(newcomer):
     firstTimer = WelcomeFirsttimers()
     group = GroupNewcomers()
     firstTimer.identify(newcomer)
-    
-    firstTimeContributor = firstTimer.getIsFirstTimeContributor() 
 
+    firstTimeContributor = firstTimer.getIsFirstTimeContributor()
     if firstTimeContributor:
         curPatch = firstTimer.getCurrentPatchset(newcomer)
 
@@ -194,7 +177,6 @@ def welcomeNewcomersAndGroupThem(newcomer):
         firstTimer.addComment(curRev)
 
     newContributor = firstTimer.getIsNewContributor()
-
     if newContributor:
         newGroupExists = group.doesNewcomerGroupExists()
         if not newGroupExists:
@@ -202,7 +184,6 @@ def welcomeNewcomersAndGroupThem(newcomer):
         group.addNewcomerToGroup(newcomer)
 
     risingContributor = firstTimer.getIsRisingContributor()
-
     if risingContributor:
         group.removeNewcomerFromGroup(newcomer)
 
@@ -220,10 +201,12 @@ def findSubmitterKey(key, dictionary):
                     for result in findSubmitterKey(key, d):
                         yield result
 
+
 def getSubmitter(submitterList):
     submitterList[:] = [item for item in submitterList if item != '']
     newcomer = submitterList[:][0]
     return newcomer
+
 
 if __name__ == '__main__':
     stream = WatchPatchsets()
@@ -235,6 +218,6 @@ if __name__ == '__main__':
         if event:
             submitterList = list(findSubmitterKey('username', event))
             newcomer = getSubmitter(submitterList)
-            welcomeNewcomersAndGroupThem(newcomer) 
-               
+            welcomeNewcomersAndGroupThem(newcomer)
+
     stream.join()
