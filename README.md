@@ -7,6 +7,8 @@ It attempts at helping DevRel’s in two ways: a) provides a solution to welcome
 * First time contributors: `reviewer:First-time-contributor`
 * New contributors with five patches in total: `ownerin:NEWCOMERS`
 
+![Welcoming a first-time-contributor](screenshots/screenshot_1.png)
+
 Development
 -----------
 ``` 
