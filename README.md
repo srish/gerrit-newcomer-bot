@@ -4,10 +4,8 @@ gerrit-newcomer-bot
 Gerrit newcomer bot for Wikimedia Foundation’s Gerrit
 
 It attempts at helping DevRel’s in two ways: a) provides a solution to welcome newcomers and b) a process to query newcomer patches. It typically does two things: a) adds a reviewer ("first-time-contributor") to a patch submitted by a first time contributor and uploads a welcome message in a comment b) add contributors with five patches submitted only to a group called "NEWCOMERS". Then to query patches in Gerrit, you could type in the search term to fetch:
-* First time contributors: `reviewer:First-time-contributor`
-* New contributors with five patches in total: `ownerin:NEWCOMERS`
-
-![Welcoming a first-time-contributor](screenshots/screenshot_1.png)
+* First time contributors: `reviewer:First-time-contributor` (https://gerrit.git.wmflabs.org/r/#/c/135/)
+* New contributors with five patches in total: `ownerin:NEWCOMERS` (https://gerrit.git.wmflabs.org/r/#/q/ownerin:NEWCOMERS)
 
 Development
 -----------
