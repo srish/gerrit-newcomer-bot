@@ -57,9 +57,9 @@ class WatchPatchsets(threading.Thread):
 
 class WelcomeFirsttimers():
     def __init__(self):
-        self.isNewContributor = False
-        self.isFirstTimeContributor = False
-        self.isRisingContributor = False
+        self.is_new_contibutor = False
+        self.is_first_time_contributor = False
+        self.is_rising_contributor = False
 
     def identify(self, submitter):
         try:
@@ -67,42 +67,42 @@ class WelcomeFirsttimers():
                 + submitter + '"'
             _, stdout, _ = client.exec_command(cmd_query_patches_by_owner)
 
-            rowCount = 0
+            row_count = 0
             lines = stdout.readlines()
-            numLines = len(lines)
+            num_lines = len(lines)
 
-            if numLines >= 1:
-                json_data = json.loads(lines[numLines - 1])
+            if num_lines >= 1:
+                json_data = json.loads(lines[num_lines - 1])
                 if json_data:
-                    rowCount = json_data.get("rowCount")
+                    row_count = json_data.get("row_count")
 
-            if rowCount == 1:
-                self.isFirstTimeContributor = True
-            elif rowCount > 0 and rowCount <= 5:
-                self.isNewContributor = True
-            elif rowCount > 5:
-                self.isRisingContributor = True
+            if row_count == 1:
+                self.is_first_time_contributor = True
+            elif row_count > 0 and row_count <= 5:
+                self.is_new_contibutor = True
+            elif row_count > 5:
+                self.is_rising_contributor = True
         except BaseException:
             logging.exception('Gerrit error')
 
-    def getIsFirstTimeContributor(self):
-        return self.isFirstTimeContributor
+    def getis_first_time_contributor(self):
+        return self.is_first_time_contributor
 
-    def getIsNewContributor(self):
-        return self.isNewContributor
+    def getis_new_contibutor(self):
+        return self.is_new_contibutor
 
-    def getIsRisingContributor(self):
-        return self.isRisingContributor
+    def getis_rising_contributor(self):
+        return self.is_rising_contributor
 
-    def addReviewer(self, project, changeID):
+    def add_reviewer(self, project, change_id):
         try:
             cmd_set_reviewers = 'gerrit set-reviewers --project ' \
-                + project + ' -a ' + reviewerBot + ' ' + changeID
-            _, stdout, _ = client.exec_command(cmd_set_reviewers)
+                + project + ' -a ' + reviewerBot + ' ' + change_id
+            client.exec_command(cmd_set_reviewers)
         except BaseException:
             logging.exception('Gerrit error')
 
-    def getCurrentPatchset(self, submitter):
+    def get_current_patchset(self, submitter):
         try:
             cmd_query_cur_patch_set = 'gerrit query --format=JSON --current-patch-set owner:' \
                 + submitter
@@ -110,22 +110,22 @@ class WelcomeFirsttimers():
             lines = stdout.readlines()
 
             if lines[0]:
-                curPatch = json.loads(lines[0])
-                return curPatch
+                cur_patch = json.loads(lines[0])
+                return cur_patch
             return
         except BaseException:
             logging.exception('Gerrit error')
 
-    def addComment(self, curRev):
+    def add_comment(self, cur_rev):
         try:
-            cmd_review = 'gerrit review -m "' + welcomeMessage + '" ' + curRev
+            cmd_review = 'gerrit review -m "' + welcomeMessage + '" ' + cur_rev
             client.exec_command(cmd_review)
         except BaseException:
             logging.exception('Gerrit error')
 
 
 class GroupNewcomers():
-    def doesNewcomerGroupExists(self):
+    def does_newcomer_group_exist(self):
         try:
             cmd_ls_groups = 'gerrit ls-groups'
             _, stdout, _ = client.exec_command(cmd_ls_groups)
@@ -138,73 +138,76 @@ class GroupNewcomers():
         except BaseException:
             logging.exception('Gerrit error')
 
-    def createNewcomerGroup(self):
+    def create_newcomer_group(self):
         try:
             cmd_create_group = 'gerrit create-group ' + newcomerGroup
             client.exec_command(cmd_create_group)
         except BaseException:
             logging.exception('Gerrit error')
 
-    def addNewcomerToGroup(self, submitter):
+    def add_newcomer_to_group(self, submitter):
         try:
-            cmd_add_member = 'gerrit set-members -a ' + submitter + " " + newcomerGroup
+            cmd_add_member = 'gerrit set-members -a {} {}'.format(
+                submitter, newcomerGroup)
             client.exec_command(cmd_add_member)
         except BaseException:
             logging.exception('Gerrit error')
 
-    def removeNewcomerFromGroup(self, submitter):
+    def remove_newcomer_from_group(self, submitter):
         try:
-            cmd_remove_member = 'gerrit set-members -r ' + submitter + " " + newcomerGroup
+            cmd_remove_member = 'gerrit set-members -r {} {}'.format(
+                submitter, newcomerGroup)
             client.exec_command(cmd_remove_member)
         except BaseException:
             logging.exception('Gerrit error')
 
 
-def welcomeNewcomersAndGroupThem(newcomer):
-    firstTimer = WelcomeFirsttimers()
+def welcome_newcomers_and_group_them(newcomer):
+    first_timer = WelcomeFirsttimers()
     group = GroupNewcomers()
-    firstTimer.identify(newcomer)
+    first_timer.identify(newcomer)
 
-    firstTimeContributor = firstTimer.getIsFirstTimeContributor()
-    if firstTimeContributor:
-        curPatch = firstTimer.getCurrentPatchset(newcomer)
+    first_time_contributor = first_timer.getis_first_time_contributor()
+    if first_time_contributor:
+        cur_patch = first_timer.get_current_patchset(newcomer)
 
-        project = curPatch.get("project")
-        changeID = curPatch.get("id")
-        curRev = curPatch.get("currentPatchSet").get("revision")
+        project = cur_patch.get("project")
+        change_id = cur_patch.get("id")
+        cur_rev = cur_patch.get("currentPatchSet").get("revision")
 
-        firstTimer.addReviewer(project, changeID)
-        firstTimer.addComment(curRev)
+        first_timer.add_reviewer(project, change_id)
+        first_timer.add_comment(cur_rev)
 
-    newContributor = firstTimer.getIsNewContributor()
-    if newContributor:
-        newGroupExists = group.doesNewcomerGroupExists()
-        if not newGroupExists:
-            group.createNewcomerGroup()
-        group.addNewcomerToGroup(newcomer)
+    new_contributor = first_timer.getis_new_contibutor()
+    if new_contributor:
+        new_group_exists = group.does_newcomer_group_exist()
+        if not new_group_exists:
+            group.create_newcomer_group()
+        group.add_newcomer_to_group(newcomer)
 
-    risingContributor = firstTimer.getIsRisingContributor()
-    if risingContributor:
-        group.removeNewcomerFromGroup(newcomer)
+    rising_contributor = first_timer.getis_rising_contributor()
+    if rising_contributor:
+        group.remove_newcomer_from_group(newcomer)
+
 
 # From https://stackoverflow.com/a/9807955
-def findSubmitterKey(key, dictionary):
+def find_submitter_key(key, dictionary):
     for k, v in dictionary.iteritems():
         if k == key:
             yield v
         elif isinstance(v, dict):
-            for result in findSubmitterKey(key, v):
+            for result in find_submitter_key(key, v):
                 yield result
         elif isinstance(v, list):
             for d in v:
                 if isinstance(d, dict):
-                    for result in findSubmitterKey(key, d):
+                    for result in find_submitter_key(key, d):
                         yield result
 
 
-def getSubmitter(submitterList):
-    submitterList[:] = [item for item in submitterList if item != '']
-    newcomer = submitterList[:][0]
+def get_submitter(submitter_list):
+    submitter_list[:] = [item for item in submitter_list if item != '']
+    newcomer = submitter_list[:][0]
     return newcomer
 
 
@@ -216,8 +219,8 @@ if __name__ == '__main__':
     while True:
         event = queue.get()
         if event:
-            submitterList = list(findSubmitterKey('username', event))
-            newcomer = getSubmitter(submitterList)
-            welcomeNewcomersAndGroupThem(newcomer)
+            submitter_list = list(find_submitter_key('username', event))
+            newcomer = get_submitter(submitter_list)
+            welcome_newcomers_and_group_them(newcomer)
 
     stream.join()
