@@ -54,7 +54,7 @@ class WatchPatchsets(threading.Thread):
             time.sleep(5)
 
 
-class WelcomeFirsttimers():
+class WelcomeNewcomersAndGroupThem():
     def __init__(self):
         self.is_new_contibutor = False
         self.is_first_time_contributor = False
@@ -122,28 +122,6 @@ class WelcomeFirsttimers():
         except BaseException:
             logging.exception('Gerrit error')
 
-
-class GroupNewcomers():
-    def does_newcomer_group_exist(self):
-        try:
-            cmd_ls_groups = 'gerrit ls-groups'
-            _, stdout, _ = client.exec_command(cmd_ls_groups)
-            lines = stdout.readlines()
-
-            for i in range(len(lines)):
-                if newcomerGroup in lines[i]:
-                    return True
-            return False
-        except BaseException:
-            logging.exception('Gerrit error')
-
-    def create_newcomer_group(self):
-        try:
-            cmd_create_group = 'gerrit create-group ' + newcomerGroup
-            client.exec_command(cmd_create_group)
-        except BaseException:
-            logging.exception('Gerrit error')
-
     def add_newcomer_to_group(self, submitter):
         try:
             cmd_add_member = 'gerrit set-members -a {} {}'.format(
@@ -161,32 +139,28 @@ class GroupNewcomers():
             logging.exception('Gerrit error')
 
 
-def welcome_newcomers_and_group_them(newcomer):
-    first_timer = WelcomeFirsttimers()
-    group = GroupNewcomers()
-    first_timer.identify(newcomer)
+def main(submitter):
+    newcomer = WelcomeNewcomersAndGroupThem()
+    newcomer.identify(submitter)
 
-    first_time_contributor = first_timer.getis_first_time_contributor()
+    first_time_contributor = newcomer.getis_first_time_contributor()
     if first_time_contributor:
-        cur_patch = first_timer.get_current_patchset(newcomer)
+        cur_patch = newcomer.get_current_patchset(submitter)
 
         project = cur_patch.get("project")
         change_id = cur_patch.get("id")
         cur_rev = cur_patch.get("currentPatchSet").get("revision")
 
-        first_timer.add_reviewer(project, change_id)
-        first_timer.add_comment(cur_rev)
+        newcomer.add_reviewer(project, change_id)
+        newcomer.add_comment(cur_rev)
 
-    new_contributor = first_timer.getis_new_contibutor()
-    if new_contributor:
-        new_group_exists = group.does_newcomer_group_exist()
-        if not new_group_exists:
-            group.create_newcomer_group()
-        group.add_newcomer_to_group(newcomer)
+    new_contributor = newcomer.getis_new_contibutor()
+    if new_contributor or first_time_contributor:
+        newcomer.add_newcomer_to_group(submitter)
 
-    rising_contributor = first_timer.getis_rising_contributor()
+    rising_contributor = newcomer.getis_rising_contributor()
     if rising_contributor:
-        group.remove_newcomer_from_group(newcomer)
+        newcomer.remove_newcomer_from_group(submitter)
 
 
 # From https://stackoverflow.com/a/9807955
@@ -206,8 +180,8 @@ def find_submitter_key(key, dictionary):
 
 def get_submitter(submitter_list):
     submitter_list[:] = [item for item in submitter_list if item != '']
-    newcomer = submitter_list[:][0]
-    return newcomer
+    submitter = submitter_list[:][0]
+    return submitter
 
 
 if __name__ == '__main__':
@@ -219,7 +193,7 @@ if __name__ == '__main__':
         event = queue.get()
         if event:
             submitter_list = list(find_submitter_key('username', event))
-            newcomer = get_submitter(submitter_list)
-            welcome_newcomers_and_group_them(newcomer)
+            submitter = get_submitter(submitter_list)
+            main(submitter)
 
     stream.join()
