@@ -1,13 +1,12 @@
-#!/usr/bin/env python
-import ConfigParser
-import Queue
+import configparser
+import queue
 import json
 import logging
 import threading
 import time
 import paramiko
 
-queue = Queue.Queue()
+queue = queue.Queue()
 
 # Logging
 logging.basicConfig(level=logging.INFO)
@@ -15,7 +14,7 @@ logger = paramiko.util.logging.getLogger()
 logger.setLevel(logging.INFO)
 
 # Config
-config = ConfigParser.ConfigParser()
+config = configparser.ConfigParser()
 config.read('gerrit.conf')
 
 options = dict(timeout=60)
@@ -74,7 +73,7 @@ class WelcomeFirsttimers():
             if num_lines >= 1:
                 json_data = json.loads(lines[num_lines - 1])
                 if json_data:
-                    row_count = json_data.get("row_count")
+                    row_count = json_data.get("rowCount")
 
             if row_count == 1:
                 self.is_first_time_contributor = True
@@ -192,7 +191,7 @@ def welcome_newcomers_and_group_them(newcomer):
 
 # From https://stackoverflow.com/a/9807955
 def find_submitter_key(key, dictionary):
-    for k, v in dictionary.iteritems():
+    for k, v in dictionary.items():
         if k == key:
             yield v
         elif isinstance(v, dict):

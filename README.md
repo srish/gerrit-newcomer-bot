@@ -12,9 +12,9 @@ Development
 ``` 
 $ git clone https://github.com/srish/gerrit-newcomer-bot 
 $ cd gerrit-newcomer-bot
-$ pip install -r requirements
+$ pip3 install -r requirements
 Copy gerrit.conf.example as gerrit.conf and enter your details
-$ python watch_newcomers.py
+$ python3 watch_newcomers.py
 ```
 
 For testing

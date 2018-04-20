@@ -1,5 +1,5 @@
-ConfigParser
-Queue
+configparser
+queue
 json
 logging
 threading
