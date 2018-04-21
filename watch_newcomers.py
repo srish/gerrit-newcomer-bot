@@ -28,16 +28,8 @@ client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 client.connect(**options)
 client.get_transport().set_keepalive(60)
 
-# Bot details
-reviewerBot = "First-time-contributor"
-welcomeMessage = "Thank you for making your first contribution to Wikimedia! :)"  \
-    "To start contributing code to Wikimedia, " \
-    "read https://www.mediawiki.org/wiki/New_Developers | " \
-    "To get an overview of technical and non-technical contribution ideas, "\
-    "read https://www.mediawiki.org/wiki/How_to_contribute | No answer? "\
-    "Try https://discourse-mediawiki.wmflabs.org"
-newcomerGroup = "NEWCOMERS"
-
+bot = dict(timeout=10)
+bot.update(config.items('Bot'))
 
 class WatchPatchsets(threading.Thread):
     def run(self):
@@ -96,7 +88,7 @@ class WelcomeNewcomersAndGroupThem():
     def add_reviewer(self, project, change_id):
         try:
             cmd_set_reviewers = 'gerrit set-reviewers --project ' \
-                + project + ' -a ' + reviewerBot + ' ' + change_id
+                + project + ' -a ' + bot['reviewer_bot'] + ' ' + change_id
             client.exec_command(cmd_set_reviewers)
         except BaseException:
             logging.exception('Gerrit error')
@@ -117,7 +109,7 @@ class WelcomeNewcomersAndGroupThem():
 
     def add_comment(self, cur_rev):
         try:
-            cmd_review = 'gerrit review -m "' + welcomeMessage + '" ' + cur_rev
+            cmd_review = 'gerrit review -m "' + bot['welcome_message'] + '" ' + cur_rev
             client.exec_command(cmd_review)
         except BaseException:
             logging.exception('Gerrit error')
@@ -125,7 +117,7 @@ class WelcomeNewcomersAndGroupThem():
     def add_newcomer_to_group(self, submitter):
         try:
             cmd_add_member = 'gerrit set-members -a {} {}'.format(
-                submitter, newcomerGroup)
+                submitter, bot['newcomer_group'])
             client.exec_command(cmd_add_member)
         except BaseException:
             logging.exception('Gerrit error')
@@ -133,7 +125,7 @@ class WelcomeNewcomersAndGroupThem():
     def remove_newcomer_from_group(self, submitter):
         try:
             cmd_remove_member = 'gerrit set-members -r {} {}'.format(
-                submitter, newcomerGroup)
+                submitter, bot['newcomer_group'])
             client.exec_command(cmd_remove_member)
         except BaseException:
             logging.exception('Gerrit error')
