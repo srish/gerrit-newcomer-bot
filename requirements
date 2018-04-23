@@ -5,3 +5,5 @@ logging
 threading
 time
 paramiko
+requests
+pygerrit2

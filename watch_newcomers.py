@@ -5,6 +5,11 @@ import logging
 import threading
 import time
 import paramiko
+import requests
+import pygerrit2
+
+from requests.auth import HTTPBasicAuth
+from pygerrit2.rest import GerritRestAPI
 
 queue = queue.Queue()
 
@@ -13,23 +18,23 @@ logging.basicConfig(level=logging.INFO)
 logger = paramiko.util.logging.getLogger()
 logger.setLevel(logging.INFO)
 
-# Config
+# Load configuration
 config = configparser.ConfigParser()
 config.read('gerrit.conf')
 
-options = dict(timeout=60)
-options.update(config.items('Gerrit'))
-options['port'] = int(options['port'])
+gerrit_ssh = dict()
+gerrit_ssh.update(config.items('Gerrit SSH'))
+gerrit_ssh['port'] = int(gerrit_ssh['port'])
+gerrit_ssh['timeout'] = int(gerrit_ssh['timeout'])
+
+misc = dict()
+misc.update(config.items('Misc'))
 
 # Paramiko client
 client = paramiko.SSHClient()
 client.load_system_host_keys()
 client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-client.connect(**options)
-client.get_transport().set_keepalive(60)
-
-bot = dict(timeout=10)
-bot.update(config.items('Bot'))
+client.connect(**gerrit_ssh)
 
 class WatchPatchsets(threading.Thread):
     def run(self):
@@ -48,144 +53,98 @@ class WatchPatchsets(threading.Thread):
 
 class WelcomeNewcomersAndGroupThem():
     def __init__(self):
-        self.is_new_contibutor = False
-        self.is_first_time_contributor = False
-        self.is_rising_contributor = False
+        self.new_contibutor = False
+        self.first_time_contributor = False
+        self.rising_contributor = False
+        self.rest_client = self.get_rest_client()
 
     def identify(self, submitter):
         try:
-            cmd_query_patches_by_owner = 'gerrit query --format=JSON owner:"' \
-                + submitter + '"'
-            _, stdout, _ = client.exec_command(cmd_query_patches_by_owner)
+            patches_by_owner = self.rest_client.get("/changes/?q=owner:" + submitter)
+            num_patches = len(patches_by_owner)
 
-            row_count = 0
-            lines = stdout.readlines()
-            num_lines = len(lines)
-
-            if num_lines >= 1:
-                json_data = json.loads(lines[num_lines - 1])
-                if json_data:
-                    row_count = json_data.get("rowCount")
-
-            if row_count == 1:
-                self.is_first_time_contributor = True
-            elif row_count > 0 and row_count <= 5:
-                self.is_new_contibutor = True
-            elif row_count > 5:
-                self.is_rising_contributor = True
+            if num_patches == 1:
+                self.first_time_contributor = True
+            elif num_patches > 0 and num_patches <= 5:
+                self.new_contibutor = True
+            elif num_patches > 5:
+                self.rising_contributor = True
         except BaseException:
             logging.exception('Gerrit error')
 
-    def getis_first_time_contributor(self):
-        return self.is_first_time_contributor
+    def is_first_time_contributor(self):
+        return self.first_time_contributor
 
-    def getis_new_contibutor(self):
-        return self.is_new_contibutor
+    def is_new_contibutor(self):
+        return self.new_contibutor
 
-    def getis_rising_contributor(self):
-        return self.is_rising_contributor
+    def is_rising_contributor(self):
+        return self.rising_contributor
 
-    def add_reviewer(self, project, change_id):
+    def add_reviewer_and_comment(self, change_id, cur_rev):
         try:
-            cmd_set_reviewers = 'gerrit set-reviewers --project ' \
-                + project + ' -a ' + bot['reviewer_bot'] + ' ' + change_id
-            client.exec_command(cmd_set_reviewers)
+            query = "/changes/" + str(change_id) + "/revisions/" + str(cur_rev) + "/review"
+            self.rest_client.post(query, 
+                json={
+                "message": misc['welcome_message'],
+                "reviewers": [{
+                    "reviewer": misc['reviewer_bot']
+                    }]
+            })  
         except BaseException:
             logging.exception('Gerrit error')
 
-    def get_current_patchset(self, submitter):
+    def add_to_group(self, username):
         try:
-            cmd_query_cur_patch_set = 'gerrit query --format=JSON --current-patch-set owner:' \
-                + submitter
-            _, stdout, _ = client.exec_command(cmd_query_cur_patch_set)
-            lines = stdout.readlines()
-
-            if lines[0]:
-                cur_patch = json.loads(lines[0])
-                return cur_patch
-            return
+            query_add_member = "/groups/" + misc['newcomer_group'] + \
+                "/members/" + username
+            self.rest_client.put(query_add_member)
         except BaseException:
             logging.exception('Gerrit error')
 
-    def add_comment(self, cur_rev):
+    def remove_from_group(self, username):
         try:
-            cmd_review = 'gerrit review -m "' + bot['welcome_message'] + '" ' + cur_rev
-            client.exec_command(cmd_review)
+            query_del_member = "/groups/" + misc['newcomer_group'] + \
+                "/members/" + username
+            self.rest_client.delete(query_del_member)
         except BaseException:
             logging.exception('Gerrit error')
 
-    def add_newcomer_to_group(self, submitter):
+    def get_rest_client(self):
         try:
-            cmd_add_member = 'gerrit set-members -a {} {}'.format(
-                submitter, bot['newcomer_group'])
-            client.exec_command(cmd_add_member)
+            auth = HTTPBasicAuth(misc['auth_username'], misc['auth_password'])
+            rest = GerritRestAPI(url=misc['base_url'], auth=auth)
+            return rest
         except BaseException:
-            logging.exception('Gerrit error')
-
-    def remove_newcomer_from_group(self, submitter):
-        try:
-            cmd_remove_member = 'gerrit set-members -r {} {}'.format(
-                submitter, bot['newcomer_group'])
-            client.exec_command(cmd_remove_member)
-        except BaseException:
-            logging.exception('Gerrit error')
+            logging.exception('Gerrit client error')
 
 
-def main(submitter):
+def main(username, change_id, revision):
     newcomer = WelcomeNewcomersAndGroupThem()
-    newcomer.identify(submitter)
+    newcomer.identify(username)
 
-    first_time_contributor = newcomer.getis_first_time_contributor()
-    if first_time_contributor:
-        cur_patch = newcomer.get_current_patchset(submitter)
+    if newcomer.is_first_time_contributor():
+        newcomer.add_reviewer_and_comment(change_id, revision)
+        newcomer.add_to_group(username)
 
-        project = cur_patch.get("project")
-        change_id = cur_patch.get("id")
-        cur_rev = cur_patch.get("currentPatchSet").get("revision")
+    if newcomer.is_new_contibutor():
+        newcomer.add_to_group(username)
 
-        newcomer.add_reviewer(project, change_id)
-        newcomer.add_comment(cur_rev)
-
-    new_contributor = newcomer.getis_new_contibutor()
-    if new_contributor or first_time_contributor:
-        newcomer.add_newcomer_to_group(submitter)
-
-    rising_contributor = newcomer.getis_rising_contributor()
-    if rising_contributor:
-        newcomer.remove_newcomer_from_group(submitter)
-
-
-# From https://stackoverflow.com/a/9807955
-def find_submitter_key(key, dictionary):
-    for k, v in dictionary.items():
-        if k == key:
-            yield v
-        elif isinstance(v, dict):
-            for result in find_submitter_key(key, v):
-                yield result
-        elif isinstance(v, list):
-            for d in v:
-                if isinstance(d, dict):
-                    for result in find_submitter_key(key, d):
-                        yield result
-
-
-def get_submitter(submitter_list):
-    submitter_list[:] = [item for item in submitter_list if item != '']
-    submitter = submitter_list[:][0]
-    return submitter
-
+    if newcomer.is_rising_contributor():
+        newcomer.remove_from_group(username)
 
 if __name__ == '__main__':
     stream = WatchPatchsets()
     stream.daemon = True
     stream.start()
-
+    
     while True:
         event = queue.get()
         if event:
-            submitter_list = list(find_submitter_key('username', event))
-            submitter = get_submitter(submitter_list)
-            main(submitter)
+            username = event['change']['owner']['username']
+            change_id = event['change']['id']
+            revision = event['patchSet']['revision']
+
+            main(username, change_id, revision)
 
     stream.join()
