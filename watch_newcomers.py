@@ -116,10 +116,7 @@ class WelcomeNewcomersAndGroupThem():
         try:
             query = "/changes/" + str(change_id) + "/revisions/" + str(cur_rev) + "/review"
             REST_CLIENT.post(query, json={
-                "message": MISC['welcome_message'],
-                "reviewers": [{
-                    "reviewer": MISC['reviewer_bot']
-                    }]
+                "message": MISC['welcome_message']
             })
         except BaseException:
             logging.exception('Gerrit error')

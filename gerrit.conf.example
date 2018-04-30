@@ -6,7 +6,6 @@ timeout = 10
 key_filename = /path_to_ssh_key
 
 [Misc]
-reviewer_bot = First-time-contributor
 welcome_message = Thank you for making your first contribution to Wikimedia! :) To start contributing code to Wikimedia, read https://www.mediawiki.org/wiki/New_Developers | To get an overview of technical and non-technical contribution ideas, read https://www.mediawiki.org/wiki/How_to_contribute | No answer? Try https://discourse-mediawiki.wmflabs.org
 newcomer_group = Newcomers
 auth_username = First-time-contributor
