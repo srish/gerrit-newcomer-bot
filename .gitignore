@@ -1,3 +1,4 @@
 .DS_Store
 .ssh/
 gerrit.conf
+ssh-host-key
