@@ -7,6 +7,7 @@
     :author: Srishti Sethi <ssethi@wikimedia.org>
 """
 
+import os
 import configparser
 import queue
 import json
@@ -26,7 +27,11 @@ LOGGER.setLevel(logging.INFO)
 
 # Load configuration
 CONFIG = configparser.ConfigParser()
-CONFIG.read('gerrit.conf')
+
+DIR = os.path.dirname(os.path.abspath(__file__))
+CONFIG_PATH = os.path.join(DIR, 'gerrit.conf')
+
+CONFIG.read(CONFIG_PATH)
 
 GERRIT_SSH = dict()
 GERRIT_SSH.update(CONFIG.items('Gerrit SSH'))
