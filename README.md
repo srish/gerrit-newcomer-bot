@@ -3,9 +3,9 @@ gerrit-newcomer-bot
 
 Gerrit newcomer bot for Wikimedia Foundation’s Gerrit
 
-It attempts at helping DevRel’s in two ways: a) provides a solution to welcome newcomers and b) a process to query newcomer patches. It typically does two things: a) adds a reviewer ("first-time-contributor") to a patch submitted by a first time contributor and uploads a welcome message in a comment b) add contributors with five patches submitted only to a group called "NEWCOMERS". Then to query patches in Gerrit, you could type in the search term to fetch:
+It attempts at helping DevRel’s in two ways: a) provides a solution to welcome newcomers and b) a process to query newcomer patches. It typically does two things: a) adds a reviewer ("first-time-contributor") to a patch submitted by a first time contributor and uploads a welcome message in a comment b) add contributors with five patches submitted only to a group called "Newcomers". Then to query patches in Gerrit, you could type in the search term to fetch:
 * First time contributors: `reviewer:First-time-contributor` (https://gerrit.git.wmflabs.org/r/#/c/135/)
-* New contributors with five patches in total: `ownerin:NEWCOMERS` (https://gerrit.git.wmflabs.org/r/#/q/ownerin:NEWCOMERS)
+* New contributors with five patches in total: `ownerin:Newcomers` (https://gerrit.git.wmflabs.org/r/#/q/ownerin:Newcomers)
 
 Development
 -----------
@@ -14,6 +14,7 @@ $ git clone https://github.com/srish/gerrit-newcomer-bot
 $ cd gerrit-newcomer-bot
 $ pip3 install -r requirements
 Copy gerrit.conf.example as gerrit.conf and enter your details
+Drop your ssh host key in the project folder (name it as: ssh-host-key)
 $ python3 watch_newcomers.py
 ```
 
@@ -27,6 +28,15 @@ For testing
 5. See the magic in action! 
 
 Note: If you want to use a different reviewer bot and not `First-time-contributor`, you will have to create one using the same process as in Step 1.
+
+For production
+--------------
+The bot is hosted here on Wikimedia's Toolforge: https://tools.wmflabs.org/admin/tool/gerrit-newcomer-bot. To make changes:
+``` 
+$ ssh username@login.tools.wmflabs.org
+$ become gerrit-newcomer-bot
+$ cd /www/python/src
+```
 
 Credits 
 -------
