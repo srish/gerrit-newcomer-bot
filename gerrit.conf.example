@@ -1,12 +1,12 @@
 [Gerrit SSH]
-username = First-time-contributor
+username = 
 hostname = gerrit.git.wmflabs.org
 port = 29418
 timeout = 10
 
 [Misc]
-welcome_message = Thank you for making your first contribution to Wikimedia! :) To start contributing code to Wikimedia, read https://www.mediawiki.org/wiki/New_Developers | To get an overview of technical and non-technical contribution ideas, read https://www.mediawiki.org/wiki/How_to_contribute | No answer? Try https://discourse-mediawiki.wmflabs.org
-newcomer_group = Newcomers
-auth_username = First-time-contributor
+welcome_message = TThank you for making your first contribution to Wikimedia! :) To learn how to get your code changes reviewed faster and more likely to get accepted, read https://www.mediawiki.org/wiki/Gerrit/Code_review/Getting_reviews. To explore more newcomer friendly projects, read https://www.mediawiki.org/wiki/New_Developers. We look forward to your next patch submission in Gerrit!
+newcomer_group = newcomers
+auth_username = 
 auth_password = 
 base_url = https://gerrit.git.wmflabs.org/r/
