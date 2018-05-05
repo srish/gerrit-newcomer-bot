@@ -13,9 +13,9 @@ import json
 import logging
 import threading
 import time
+import re
 import paramiko
 import requests
-import re
 from requests.auth import HTTPBasicAuth
 from pygerrit2.rest import GerritRestAPI
 
@@ -81,7 +81,7 @@ class WelcomeNewcomersAndGroupThem():
     It also adds all first time and new contributors to a group 'Newcomer'
     """
     def __init__(self):
-        self.new_contibutor = False
+        self.new_contributor = False
         self.first_time_contributor = False
         self.rising_contributor = False
 
@@ -95,7 +95,7 @@ class WelcomeNewcomersAndGroupThem():
             if num_patches == 1:
                 self.first_time_contributor = True
             elif num_patches > 0 and num_patches <= 5:
-                self.new_contibutor = True
+                self.new_contributor = True
             elif num_patches > 5:
                 self.rising_contributor = True
         except BaseException:
@@ -106,10 +106,10 @@ class WelcomeNewcomersAndGroupThem():
         """
         return self.first_time_contributor
 
-    def is_new_contibutor(self):
+    def is_new_contributor(self):
         """ Returns new_contributor as boolean
         """
-        return self.new_contibutor
+        return self.new_contributor
 
     def is_rising_contributor(self):
         """ Returns rising_contributor as boolean
@@ -147,14 +147,15 @@ class WelcomeNewcomersAndGroupThem():
             REST_CLIENT.delete(query_del_member)
         except BaseException:
             logging.exception('Gerrit error')
-            
-    def fetch_welcome_message(self): 
+
+    def fetch_welcome_message(self):
         """ Fetch welcome message from a remote wiki page
         """
         # build the API request url
-        url = "https://www.mediawiki.org/w/index.php?title=" + MISC['welcome_message_page']  + "&action=raw";
-        r = requests.get(url)
-        content = r.text
+        url = "https://www.mediawiki.org/w/index.php?title=" + \
+            MISC['welcome_message_page']  + "&action=raw"
+        response = requests.get(url)
+        content = response.text
         # remove tags
         content = re.compile(r'<.*?>').sub('', content)
         return content
@@ -173,7 +174,7 @@ def main(event):
         newcomer.add_reviewer_and_comment(change_id, revision)
         newcomer.add_to_group(username)
 
-    if newcomer.is_new_contibutor():
+    if newcomer.is_new_contributor():
         newcomer.add_to_group(username)
 
     if newcomer.is_rising_contributor():
