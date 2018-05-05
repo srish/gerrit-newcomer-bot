@@ -15,6 +15,7 @@ import threading
 import time
 import paramiko
 import requests
+import re
 from requests.auth import HTTPBasicAuth
 from pygerrit2.rest import GerritRestAPI
 
@@ -157,6 +158,8 @@ class WelcomeNewcomersAndGroupThem():
         url = "https://www.mediawiki.org/w/index.php?title=" + WELCOME_MESSAGE_PAGE + "&action=raw";
         r = requests.get(url)
         content = r.text
+        # remove tags
+        content = re.compile(r'<.*?>').sub('', content)
         return content
 
 
