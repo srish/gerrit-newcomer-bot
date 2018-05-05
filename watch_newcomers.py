@@ -121,10 +121,11 @@ class WelcomeNewcomersAndGroupThem():
         to a patch
         """
         try:
-            query = "/changes/" + str(change_id) + "/revisions/" + str(cur_rev) + "/review"
-            REST_CLIENT.post(query, json={
-                "message": self.fetch_welcome_message()
-            })
+            if not self.is_reviewer_added_already(change_id):
+                query = "/changes/" + str(change_id) + "/revisions/" + str(cur_rev) + "/review"
+                REST_CLIENT.post(query, json={
+                    "message": self.fetch_welcome_message()
+                })
         except BaseException:
             logging.exception('Gerrit error')
 
@@ -145,6 +146,23 @@ class WelcomeNewcomersAndGroupThem():
             query_del_member = "/groups/" + MISC['newcomer_group'] + \
                 "/members/" + username
             REST_CLIENT.delete(query_del_member)
+
+        except BaseException:
+            logging.exception('Gerrit error')
+
+    def is_reviewer_added_already(self, change_id):
+        """ Check if newcomer bot is already added as a reviewer to a patch
+        """
+        try:
+            query_change_details = "/changes/" + str(change_id) + "/detail"
+            change_details = REST_CLIENT.get(query_change_details)
+            reviewers = change_details["reviewers"] and change_details["reviewers"]["REVIEWER"]
+            num_of_reviewers = len(reviewers)
+
+            for i in range(num_of_reviewers):
+                if MISC['bot_fullname'] == reviewers[i]['name']:
+                    return True
+            return False
         except BaseException:
             logging.exception('Gerrit error')
 

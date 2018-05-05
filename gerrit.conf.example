@@ -5,6 +5,7 @@ port = 29418
 timeout = 10
 
 [Misc]
+bot_fullname = First-time-contributor
 welcome_message_page = User:SSethi (WMF)/Sandbox/Gerrit newcomer bot text
 newcomer_group = newcomers
 auth_username = 
