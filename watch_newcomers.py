@@ -14,6 +14,7 @@ import logging
 import threading
 import time
 import paramiko
+import requests
 from requests.auth import HTTPBasicAuth
 from pygerrit2.rest import GerritRestAPI
 
@@ -50,6 +51,9 @@ SSH_CLIENT.connect(**GERRIT_SSH)
 # Rest client
 REST_AUTH = HTTPBasicAuth(MISC['auth_username'], MISC['auth_password'])
 REST_CLIENT = GerritRestAPI(url=MISC['base_url'], auth=REST_AUTH)
+
+# Welcome message
+WELCOME_MESSAGE_PAGE = "User:SSethi (WMF)/Gerrit bot text"
 
 class WatchPatchsets(threading.Thread):
     """This class watches gerrit stream event patchset-created
@@ -121,7 +125,7 @@ class WelcomeNewcomersAndGroupThem():
         try:
             query = "/changes/" + str(change_id) + "/revisions/" + str(cur_rev) + "/review"
             REST_CLIENT.post(query, json={
-                "message": MISC['welcome_message']
+                "message": self.fetch_welcome_message()
             })
         except BaseException:
             logging.exception('Gerrit error')
@@ -145,6 +149,15 @@ class WelcomeNewcomersAndGroupThem():
             REST_CLIENT.delete(query_del_member)
         except BaseException:
             logging.exception('Gerrit error')
+            
+    def fetch_welcome_message(self): 
+        """ Fetch welcome message from a remote wiki page
+        """
+        # build the API request url
+        url = "https://www.mediawiki.org/w/index.php?title=" + WELCOME_MESSAGE_PAGE + "&action=raw";
+        r = requests.get(url)
+        content = r.text
+        return content
 
 
 def main(event):
