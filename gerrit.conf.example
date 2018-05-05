@@ -5,7 +5,7 @@ port = 29418
 timeout = 10
 
 [Misc]
-welcome_message = TThank you for making your first contribution to Wikimedia! :) To learn how to get your code changes reviewed faster and more likely to get accepted, read https://www.mediawiki.org/wiki/Gerrit/Code_review/Getting_reviews. To explore more newcomer friendly projects, read https://www.mediawiki.org/wiki/New_Developers. We look forward to your next patch submission in Gerrit!
+welcome_message_page = User:SSethi (WMF)/Sandbox/Gerrit newcomer bot text
 newcomer_group = newcomers
 auth_username = 
 auth_password = 

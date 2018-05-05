@@ -14,6 +14,8 @@ import logging
 import threading
 import time
 import paramiko
+import requests
+import re
 from requests.auth import HTTPBasicAuth
 from pygerrit2.rest import GerritRestAPI
 
@@ -121,7 +123,7 @@ class WelcomeNewcomersAndGroupThem():
         try:
             query = "/changes/" + str(change_id) + "/revisions/" + str(cur_rev) + "/review"
             REST_CLIENT.post(query, json={
-                "message": MISC['welcome_message']
+                "message": self.fetch_welcome_message()
             })
         except BaseException:
             logging.exception('Gerrit error')
@@ -145,7 +147,17 @@ class WelcomeNewcomersAndGroupThem():
             REST_CLIENT.delete(query_del_member)
         except BaseException:
             logging.exception('Gerrit error')
-
+            
+    def fetch_welcome_message(self): 
+        """ Fetch welcome message from a remote wiki page
+        """
+        # build the API request url
+        url = "https://www.mediawiki.org/w/index.php?title=" + MISC['welcome_message_page']  + "&action=raw";
+        r = requests.get(url)
+        content = r.text
+        # remove tags
+        content = re.compile(r'<.*?>').sub('', content)
+        return content
 
 def main(event):
     """ Invokes functions of class 'WelcomeNewcomersAndGroupThem'
