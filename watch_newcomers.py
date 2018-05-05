@@ -53,9 +53,6 @@ SSH_CLIENT.connect(**GERRIT_SSH)
 REST_AUTH = HTTPBasicAuth(MISC['auth_username'], MISC['auth_password'])
 REST_CLIENT = GerritRestAPI(url=MISC['base_url'], auth=REST_AUTH)
 
-# Welcome message
-WELCOME_MESSAGE_PAGE = "User:SSethi (WMF)/Gerrit bot text"
-
 class WatchPatchsets(threading.Thread):
     """This class watches gerrit stream event patchset-created
     """
@@ -155,13 +152,12 @@ class WelcomeNewcomersAndGroupThem():
         """ Fetch welcome message from a remote wiki page
         """
         # build the API request url
-        url = "https://www.mediawiki.org/w/index.php?title=" + WELCOME_MESSAGE_PAGE + "&action=raw";
+        url = "https://www.mediawiki.org/w/index.php?title=" + MISC['welcome_message_page']  + "&action=raw";
         r = requests.get(url)
         content = r.text
         # remove tags
         content = re.compile(r'<.*?>').sub('', content)
         return content
-
 
 def main(event):
     """ Invokes functions of class 'WelcomeNewcomersAndGroupThem'
