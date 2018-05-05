@@ -160,7 +160,7 @@ class WelcomeNewcomersAndGroupThem():
             num_of_reviewers = len(reviewers)
 
             for i in range(num_of_reviewers):
-                if MISC['bot_fullname'] == reviewers[i]['name']:
+                if MISC['auth_username'] == reviewers[i]['username']:
                     return True
             return False
         except BaseException:
