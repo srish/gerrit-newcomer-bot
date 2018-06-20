@@ -181,7 +181,9 @@ class WelcomeNewcomersAndGroupThem():
 def main(event):
     """ Invokes functions of class 'WelcomeNewcomersAndGroupThem'
     """
-    username = event['change']['owner']['username']
+    logging.info('Patch details: %s', event)
+
+    username = event['patchSet']['author']['username']
     change_id = event['change']['id']
     revision = event['patchSet']['revision']
 
