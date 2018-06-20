@@ -22,9 +22,10 @@ from pygerrit2.rest import GerritRestAPI
 QUEUE = queue.Queue()
 
 # Logging
-logging.basicConfig(level=logging.INFO)
-LOGGER = paramiko.util.logging.getLogger()
-LOGGER.setLevel(logging.INFO)
+logging.basicConfig(level=logging.DEBUG,
+                    filename='gerrit-newcomer-bot.log',
+                    filemode='a+',
+                    format='%(asctime)-15s %(levelname)-8s %(message)s')
 
 # Load configuration
 CONFIG = configparser.ConfigParser()
@@ -63,8 +64,8 @@ class WatchPatchsets(threading.Thread):
                 _, stdout, _ = SSH_CLIENT.exec_command(cmd_patchset_created)
                 for line in stdout:
                     QUEUE.put(json.loads(line))
-            except BaseException:
-                logging.exception('Gerrit error')
+            except BaseException as err:
+                logging.debug('Error occured while watching event: %s', err)
             finally:
                 SSH_CLIENT.close()
             time.sleep(5)
@@ -98,8 +99,8 @@ class WelcomeNewcomersAndGroupThem():
                 self.new_contributor = True
             elif num_patches > 5:
                 self.rising_contributor = True
-        except BaseException:
-            logging.exception('Gerrit error')
+        except BaseException as err:
+            logging.debug('Error occured while identifying patch owner: %s', err)
 
     def is_first_time_contributor(self):
         """ Returns first_time_contributor as boolean
@@ -126,8 +127,8 @@ class WelcomeNewcomersAndGroupThem():
                 REST_CLIENT.post(query, json={
                     "message": self.fetch_welcome_message()
                 })
-        except BaseException:
-            logging.exception('Gerrit error')
+        except BaseException as err:
+            logging.debug('Error occured while adding reviewer and welcome comment: %s', err)
 
     def add_to_group(self, username):
         """ Adds newcomer to a group
@@ -136,8 +137,8 @@ class WelcomeNewcomersAndGroupThem():
             query_add_member = "/groups/" + MISC['newcomer_group'] + \
                 "/members/" + username
             REST_CLIENT.put(query_add_member)
-        except BaseException:
-            logging.exception('Gerrit error')
+        except BaseException as err:
+            logging.debug('Error occured while adding newcomer to group: %s', err)
 
     def remove_from_group(self, username):
         """ Removes newcomer from a group
@@ -146,9 +147,8 @@ class WelcomeNewcomersAndGroupThem():
             query_del_member = "/groups/" + MISC['newcomer_group'] + \
                 "/members/" + username
             REST_CLIENT.delete(query_del_member)
-
-        except BaseException:
-            logging.exception('Gerrit error')
+        except BaseException as err:
+            logging.debug('Error occured while removing newcomer from group: %s', err)
 
     def is_reviewer_added_already(self, change_id):
         """ Check if newcomer bot is already added as a reviewer to a patch
@@ -163,8 +163,8 @@ class WelcomeNewcomersAndGroupThem():
                 if MISC['auth_username'] == reviewers[i]['username']:
                     return True
             return False
-        except BaseException:
-            logging.exception('Gerrit error')
+        except BaseException as err:
+            logging.debug('Error occured while querying change details: %s', err)
 
     def fetch_welcome_message(self):
         """ Fetch welcome message from a remote wiki page
@@ -188,14 +188,19 @@ def main(event):
     newcomer = WelcomeNewcomersAndGroupThem()
     newcomer.identify(username)
 
+    logging.info('Patch has been uploaded by user: %s', username)
+
     if newcomer.is_first_time_contributor():
+        logging.info('Patch owner is a first time contributor')
         newcomer.add_reviewer_and_comment(change_id, revision)
         newcomer.add_to_group(username)
 
     if newcomer.is_new_contributor():
+        logging.info('Patch owner is a new contributor')
         newcomer.add_to_group(username)
 
     if newcomer.is_rising_contributor():
+        logging.info('Patch owner is a rising contributor')
         newcomer.remove_from_group(username)
 
 STREAM = WatchPatchsets()
