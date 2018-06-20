@@ -144,11 +144,28 @@ class WelcomeNewcomersAndGroupThem():
         """ Removes newcomer from a group
         """
         try:
-            query_del_member = "/groups/" + MISC['newcomer_group'] + \
-                "/members/" + username
-            REST_CLIENT.delete(query_del_member)
+            if not self.is_rising_contributor_in_group(username):
+                query_del_member = "/groups/" + MISC['newcomer_group'] + \
+                    "/members/" + username
+                REST_CLIENT.delete(query_del_member)
         except BaseException as err:
             logging.debug('Error occured while removing newcomer from group: %s', err)
+
+    def is_rising_contributor_in_group(self, username):
+        """ Check if rising contributor is member of newcomer group
+        """
+        try:
+            query_ls_members = "/groups/" + MISC['newcomer_group'] + \
+                "/members/"
+            group_members = REST_CLIENT.get(query_ls_members)
+            num_of_members = len(group_members)
+
+            for i in range(num_of_members):
+                if username == group_members[i]['username']:
+                    return True
+            return False
+        except BaseException as err:
+            logging.debug('Error listing members of newcomer group: %s', err)
 
     def is_reviewer_added_already(self, change_id):
         """ Check if newcomer bot is already added as a reviewer to a patch
