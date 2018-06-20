@@ -144,7 +144,7 @@ class WelcomeNewcomersAndGroupThem():
         """ Removes newcomer from a group
         """
         try:
-            if not self.is_rising_contributor_in_group(username):
+            if self.is_rising_contributor_in_group(username):
                 query_del_member = "/groups/" + MISC['newcomer_group'] + \
                     "/members/" + username
                 REST_CLIENT.delete(query_del_member)
