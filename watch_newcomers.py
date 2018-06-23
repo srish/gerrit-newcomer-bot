@@ -173,7 +173,7 @@ class WelcomeNewcomersAndGroupThem():
         try:
             query_change_details = "/changes/" + str(change_id) + "/detail"
             change_details = REST_CLIENT.get(query_change_details)
-            reviewers = change_details["reviewers"] and change_details["reviewers"]["REVIEWER"]
+            reviewers = change_details["removable_reviewers"]
             num_of_reviewers = len(reviewers)
 
             for i in range(num_of_reviewers):
