@@ -10,3 +10,9 @@ newcomer_group = newcomers
 auth_username = 
 auth_password = 
 base_url = https://gerrit.git.wmflabs.org/r/
+
+[Twilio]
+account_sid = 
+auth_token = 
+from_num = 
+to_num = 

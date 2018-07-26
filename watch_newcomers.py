@@ -18,6 +18,7 @@ import paramiko
 import requests
 from requests.auth import HTTPBasicAuth
 from pygerrit2.rest import GerritRestAPI
+from twilio.rest import Client
 
 QUEUE = queue.Queue()
 
@@ -43,6 +44,9 @@ GERRIT_SSH['timeout'] = int(GERRIT_SSH['timeout'])
 MISC = dict()
 MISC.update(CONFIG.items('Misc'))
 
+TWILIO = dict()
+TWILIO.update(CONFIG.items('Twilio'))
+
 # Paramiko client
 SSH_CLIENT = paramiko.SSHClient()
 HOSTKEY_PATH = os.path.join(DIR, 'ssh-host-key')
@@ -53,6 +57,9 @@ SSH_CLIENT.connect(**GERRIT_SSH)
 # Rest client
 REST_AUTH = HTTPBasicAuth(MISC['auth_username'], MISC['auth_password'])
 REST_CLIENT = GerritRestAPI(url=MISC['base_url'], auth=REST_AUTH)
+
+# Twilio client
+TWILIO_CLIENT = Client(TWILIO['account_sid'], TWILIO['auth_token'])
 
 class WatchPatchsets(threading.Thread):
     """This class watches gerrit stream event patchset-created
@@ -65,7 +72,10 @@ class WatchPatchsets(threading.Thread):
                 for line in stdout:
                     QUEUE.put(json.loads(line))
             except BaseException as err:
-                logging.debug('Error occured while watching event: %s', err)
+                e = 'Error occured while watching event: %s', err
+                logging.debug(e)
+                TWILIO_CLIENT.messages.create(from_=TWILIO['from_num'], to=TWILIO['to_num'], body=e)
+
             finally:
                 SSH_CLIENT.close()
             time.sleep(5)
@@ -100,7 +110,9 @@ class WelcomeNewcomersAndGroupThem():
             elif num_patches > 5:
                 self.rising_contributor = True
         except BaseException as err:
-            logging.debug('Error occured while identifying patch owner: %s', err)
+            e = 'Error occured while identifying patch owner: %s', err
+            logging.debug(e)
+            TWILIO_CLIENT.messages.create(from_=TWILIO['from_num'], to=TWILIO['to_num'], body=e)
 
     def is_first_time_contributor(self):
         """ Returns first_time_contributor as boolean
@@ -128,7 +140,9 @@ class WelcomeNewcomersAndGroupThem():
                     "message": self.fetch_welcome_message()
                 })
         except BaseException as err:
-            logging.debug('Error occured while adding reviewer and welcome comment: %s', err)
+            e = 'Error occured while adding reviewer and welcome comment: %s', err
+            logging.debug(e)
+            TWILIO_CLIENT.messages.create(from_=TWILIO['from_num'], to=TWILIO['to_num'], body=e)
 
     def add_to_group(self, username):
         """ Adds newcomer to a group
@@ -138,7 +152,9 @@ class WelcomeNewcomersAndGroupThem():
                 "/members/" + username
             REST_CLIENT.put(query_add_member)
         except BaseException as err:
-            logging.debug('Error occured while adding newcomer to group: %s', err)
+            e = 'Error occured while adding newcomer to group: %s', err
+            logging.debug(e)
+            TWILIO_CLIENT.messages.create(from_=TWILIO['from_num'], to=TWILIO['to_num'], body=e)
 
     def remove_from_group(self, username):
         """ Removes newcomer from a group
@@ -149,7 +165,9 @@ class WelcomeNewcomersAndGroupThem():
                     "/members/" + username
                 REST_CLIENT.delete(query_del_member)
         except BaseException as err:
-            logging.debug('Error occured while removing newcomer from group: %s', err)
+            e = 'Error occured while removing newcomer from group: %s', err
+            logging.debug(e)
+            TWILIO_CLIENT.messages.create(from_=TWILIO['from_num'], to=TWILIO['to_num'], body=e)
 
     def is_rising_contributor_in_group(self, username):
         """ Check if rising contributor is member of newcomer group
@@ -165,7 +183,9 @@ class WelcomeNewcomersAndGroupThem():
                     return True
             return False
         except BaseException as err:
-            logging.debug('Error listing members of newcomer group: %s', err)
+            e = 'Error listing members of newcomer group: %s', err
+            logging.debug(e)
+            TWILIO_CLIENT.messages.create(from_=TWILIO['from_num'], to=TWILIO['to_num'], body=e)
 
     def is_reviewer_added_already(self, change_id):
         """ Check if newcomer bot is already added as a reviewer to a patch
@@ -181,7 +201,9 @@ class WelcomeNewcomersAndGroupThem():
                     return True
             return False
         except BaseException as err:
-            logging.debug('Error occured while querying change details: %s', err)
+            e = 'Error occured while querying change details: %s', err
+            logging.debug(e)
+            TWILIO_CLIENT.messages.create(from_=TWILIO['from_num'], to=TWILIO['to_num'], body=e)
 
     def fetch_welcome_message(self):
         """ Fetch welcome message from a remote wiki page
