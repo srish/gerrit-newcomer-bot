@@ -18,7 +18,7 @@ import paramiko
 import requests
 from requests.auth import HTTPBasicAuth
 from pygerrit2.rest import GerritRestAPI
-from twilio.rest import Client
+from twilio.rest import TwilioRestClient
 
 QUEUE = queue.Queue()
 
@@ -59,7 +59,7 @@ REST_AUTH = HTTPBasicAuth(MISC['auth_username'], MISC['auth_password'])
 REST_CLIENT = GerritRestAPI(url=MISC['base_url'], auth=REST_AUTH)
 
 # Twilio client
-TWILIO_CLIENT = Client(TWILIO['account_sid'], TWILIO['auth_token'])
+TWILIO_CLIENT = TwilioRestClient(TWILIO['account_sid'], TWILIO['auth_token'])
 
 class WatchPatchsets(threading.Thread):
     """This class watches gerrit stream event patchset-created
@@ -74,7 +74,7 @@ class WatchPatchsets(threading.Thread):
             except BaseException as err:
                 e = 'Error occured while watching event: %s', err
                 logging.debug(e)
-                TWILIO_CLIENT.messages.create(from_=TWILIO['from_num'], to=TWILIO['to_num'], body=e)
+                TWILIO_CLIENT.messages.create(from_=TWILIO['from_num'], to=TWILIO['to_num'], body='Error watching event')
 
             finally:
                 SSH_CLIENT.close()
